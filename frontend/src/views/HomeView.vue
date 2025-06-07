@@ -91,16 +91,14 @@ function updateStageInList(updatedStage) {
   }
 }
 
-// --- FUNÇÕES DO MODAL DE CLIENTE ---
+// --- FUNÇÕES DO MODAL DE CLIENTE (ADICIONAR) ---
 function openAddClientModal() {
   isAddClientModalOpen.value = true;
 }
-
 function closeAddClientModal() {
   isAddClientModalOpen.value = false;
   newClient.value = { name: "", contact_person: "" };
 }
-
 async function saveNewClient() {
   if (!newClient.value.name.trim()) {
     handleError("O nome do cliente não pode estar em branco.");
@@ -115,18 +113,16 @@ async function saveNewClient() {
   }
 }
 
-// --- FUNÇÕES DO MODAL DE EDIÇÃO DE CLIENTE ---
+// --- FUNÇÕES DO MODAL DE CLIENTE (EDITAR/DELETAR) ---
 function openEditClientModal() {
   if (!selectedClient.value) return;
   editingClient.value = { ...selectedClient.value };
   isEditClientModalOpen.value = true;
 }
-
 function closeEditClientModal() {
   isEditClientModalOpen.value = false;
   editingClient.value = null;
 }
-
 async function updateClient() {
   if (!editingClient.value || !editingClient.value.name.trim()) {
     handleError("O nome do cliente não pode estar em branco.");
@@ -137,15 +133,12 @@ async function updateClient() {
     const previouslySelectedProjectId = selectedProject.value
       ? selectedProject.value.id
       : null;
-
     await axios.put(
       `http://127.0.0.1:5000/api/clients/${editingClient.value.id}`,
       editingClient.value
     );
-
     closeEditClientModal();
     await fetchClients();
-
     selectedClient.value =
       clients.value.find((c) => c.id === previouslySelectedClientId) || null;
     if (selectedClient.value) {
@@ -161,17 +154,32 @@ async function updateClient() {
     handleError(err.response?.data?.error || "Erro ao atualizar o cliente.");
   }
 }
+async function deleteClient(clientId) {
+  const userConfirmed = confirm(
+    "ATENÇÃO:\nVocê tem certeza que deseja deletar este cliente?\nTodos os projetos e tempos registrados para ele serão apagados PERMANENTEMENTE."
+  );
+  if (!userConfirmed) return;
+  try {
+    await axios.delete(`http://127.0.0.1:5000/api/clients/${clientId}`);
+    closeEditClientModal();
+    selectedClient.value = null;
+    selectedProject.value = null;
+    clientProjects.value = [];
+    stages.value = [];
+    await fetchClients();
+  } catch (err) {
+    handleError(err.response?.data?.error || "Erro ao deletar o cliente.");
+  }
+}
 
 // --- FUNÇÕES DO MODAL DE PROJETO ---
 function openAddProjectModal() {
   isAddProjectModalOpen.value = true;
 }
-
 function closeAddProjectModal() {
   isAddProjectModalOpen.value = false;
   newProject.value = { name: "" };
 }
-
 async function saveNewProject() {
   if (!newProject.value.name.trim() || !selectedClient.value) {
     handleError("Nome do projeto e cliente são necessários.");
@@ -183,7 +191,6 @@ async function saveNewProject() {
       client_id: selectedClient.value.id,
     };
     await axios.post("http://127.0.0.1:5000/api/projects", payload);
-
     closeAddProjectModal();
     await onClientChange();
   } catch (err) {
@@ -363,14 +370,23 @@ onMounted(() => {
           <div class="modal-actions">
             <button
               type="button"
-              class="button-secondary"
-              @click="closeEditClientModal"
+              class="button-danger"
+              @click="deleteClient(editingClient.id)"
             >
-              Cancelar
+              Deletar Cliente
             </button>
-            <button type="submit" class="button-primary">
-              Salvar Alterações
-            </button>
+            <div class="main-actions">
+              <button
+                type="button"
+                class="button-secondary"
+                @click="closeEditClientModal"
+              >
+                Cancelar
+              </button>
+              <button type="submit" class="button-primary">
+                Salvar Alterações
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -503,7 +519,12 @@ header {
 .modal-actions {
   margin-top: 1.5rem;
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+.main-actions {
+  display: flex;
   gap: 1rem;
 }
 .modal-actions button {
@@ -520,6 +541,10 @@ header {
 .button-secondary {
   background-color: #eee;
   color: #333;
+}
+.button-danger {
+  background-color: #e53935;
+  color: white;
 }
 #new-client-name,
 #new-client-contact,

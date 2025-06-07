@@ -110,6 +110,29 @@ def update_client(client_id):
     return jsonify(client_to_update.to_dict())
 
 
+@app.route("/api/clients/<int:client_id>", methods=["DELETE"])
+def delete_client(client_id):
+    # Encontra o cliente que queremos apagar
+    client_to_delete = db.session.get(Client, client_id)
+    if not client_to_delete:
+        return jsonify({"error": "Cliente não encontrado."}), 404
+
+    # A MÁGICA DO CASCADE:
+    # Graças à opção 'cascade="all, delete-orphan"' que definimos no nosso modelo Client,
+    # o SQLAlchemy é inteligente o suficiente para apagar automaticamente todos os Projetos,
+    # Etapas e Registros de Tempo associados a este cliente. Não precisamos fazer mais nada!
+
+    db.session.delete(client_to_delete)
+    db.session.commit()
+
+    return (
+        jsonify(
+            {"message": "Cliente e todos os seus projetos foram deletados com sucesso."}
+        ),
+        200,
+    )
+
+
 @app.route("/api/clients/<int:client_id>/projects", methods=["GET"])
 def get_projects_by_client(client_id):
     return jsonify(
