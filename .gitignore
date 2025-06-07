@@ -1,0 +1,54 @@
+# Arquivo .gitignore para o projeto ServTracker
+
+# ----------------- #
+#  Backend (Python) #
+# ----------------- #
+
+# A pasta do ambiente virtual. ESSENCIAL ignorar.
+backend/.venv/
+backend/venv/
+
+# Cache do Python e arquivos compilados
+backend/__pycache__/
+backend/*.pyc
+
+# O arquivo do banco de dados SQLite. NUNCA envie o banco para o GitHub.
+backend/servtracker.db
+
+# Arquivo de requisitos gerado (se usar um diferente para produção)
+# requirements.txt  (Vamos manter este comentado por enquanto, pois queremos enviá-lo)
+
+
+# ----------------- #
+#  Frontend (Vue)   #
+# ----------------- #
+
+# A pasta de módulos do Node. ESSENCIAL ignorar.
+frontend/node_modules/
+
+# A pasta de "build" de produção. Gerada automaticamente.
+frontend/dist/
+
+# Arquivos de log de erro do NPM
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Arquivos de cache e temporários do editor e de ferramentas
+.eslintcache
+
+
+# ---------------------------- #
+#  OS & Editor-specific Files  #
+# ---------------------------- #
+
+# Arquivos de sistema operacional
+.DS_Store
+Thumbs.db
+
+# Pasta de configuração do VS Code
+.vscode/
+
+# Arquivos de ambiente (se usarmos no futuro)
+.env
+.env.*

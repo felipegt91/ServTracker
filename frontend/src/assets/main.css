@@ -1,0 +1,42 @@
+/* 1. Definindo variáveis de cores e fontes para uso em toda a aplicação.
+     Isso facilita a manutenção do design. Se quiser mudar uma cor,
+     você só muda aqui.
+*/
+:root {
+  --cor-principal: #2c3e50;
+  --cor-texto-claro: #f9f9f9;
+  --cor-fundo: #ffffff;
+  --cor-fundo-secundaria: #f0f2f5;
+  --cor-borda: #e0e0e0;
+  --cor-primaria-acao: #42b883;
+  --cor-primaria-feedback: #e8f5e9;
+  --cor-primaria-feedback-borda: #4caf50;
+
+  --fonte-principal: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* 2. Um "CSS Reset" moderno.
+     Isso remove estilos padrão dos navegadores (como margens e paddings)
+     para garantir que sua aplicação tenha uma aparência consistente em todos eles.
+*/
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-weight: normal;
+}
+
+/* 3. Estilos de base para o corpo da página.
+*/
+body {
+  min-height: 100vh;
+  color: var(--cor-principal);
+  background: var(--cor-fundo-secundaria);
+  font-family: var(--fonte-principal);
+  font-size: 16px;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
