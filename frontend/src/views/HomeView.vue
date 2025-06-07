@@ -18,6 +18,8 @@ const isAddClientModalOpen = ref(false);
 const newClient = ref({ name: "", contact_person: "" });
 const isAddProjectModalOpen = ref(false);
 const newProject = ref({ name: "" });
+const isEditClientModalOpen = ref(false);
+const editingClient = ref(null);
 
 // --- PROPRIEDADE COMPUTADA ---
 const totalProjectTimeSeconds = computed(() => {
@@ -113,6 +115,53 @@ async function saveNewClient() {
   }
 }
 
+// --- FUNÇÕES DO MODAL DE EDIÇÃO DE CLIENTE ---
+function openEditClientModal() {
+  if (!selectedClient.value) return;
+  editingClient.value = { ...selectedClient.value };
+  isEditClientModalOpen.value = true;
+}
+
+function closeEditClientModal() {
+  isEditClientModalOpen.value = false;
+  editingClient.value = null;
+}
+
+async function updateClient() {
+  if (!editingClient.value || !editingClient.value.name.trim()) {
+    handleError("O nome do cliente não pode estar em branco.");
+    return;
+  }
+  try {
+    const previouslySelectedClientId = selectedClient.value.id;
+    const previouslySelectedProjectId = selectedProject.value
+      ? selectedProject.value.id
+      : null;
+
+    await axios.put(
+      `http://127.0.0.1:5000/api/clients/${editingClient.value.id}`,
+      editingClient.value
+    );
+
+    closeEditClientModal();
+    await fetchClients();
+
+    selectedClient.value =
+      clients.value.find((c) => c.id === previouslySelectedClientId) || null;
+    if (selectedClient.value) {
+      await onClientChange();
+      if (previouslySelectedProjectId) {
+        selectedProject.value =
+          clientProjects.value.find(
+            (p) => p.id === previouslySelectedProjectId
+          ) || null;
+      }
+    }
+  } catch (err) {
+    handleError(err.response?.data?.error || "Erro ao atualizar o cliente.");
+  }
+}
+
 // --- FUNÇÕES DO MODAL DE PROJETO ---
 function openAddProjectModal() {
   isAddProjectModalOpen.value = true;
@@ -134,8 +183,9 @@ async function saveNewProject() {
       client_id: selectedClient.value.id,
     };
     await axios.post("http://127.0.0.1:5000/api/projects", payload);
+
     closeAddProjectModal();
-    await onClientChange(); // Re-busca os projetos do cliente para atualizar a lista
+    await onClientChange();
   } catch (err) {
     handleError(err.response?.data?.error || "Erro ao salvar novo projeto.");
   }
@@ -158,9 +208,18 @@ onMounted(() => {
         <div class="form-group">
           <div class="label-with-button">
             <label for="client-select">1. Selecione o Cliente:</label>
-            <button @click="openAddClientModal" class="add-new-button">
-              + Novo Cliente
-            </button>
+            <div>
+              <button
+                v-if="selectedClient"
+                @click="openEditClientModal"
+                class="add-new-button edit-button"
+              >
+                Editar
+              </button>
+              <button @click="openAddClientModal" class="add-new-button">
+                + Novo Cliente
+              </button>
+            </div>
           </div>
           <select
             id="client-select"
@@ -275,6 +334,49 @@ onMounted(() => {
     </div>
 
     <div
+      v-if="isEditClientModalOpen"
+      class="modal-overlay"
+      @click.self="closeEditClientModal"
+    >
+      <div class="modal-content">
+        <h2>Editar Cliente</h2>
+        <form v-if="editingClient" @submit.prevent="updateClient">
+          <div class="form-group">
+            <label for="edit-client-name">Nome do Cliente</label>
+            <input
+              type="text"
+              id="edit-client-name"
+              v-model="editingClient.name"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="edit-client-contact"
+              >Pessoa de Contato (Opcional)</label
+            >
+            <input
+              type="text"
+              id="edit-client-contact"
+              v-model="editingClient.contact_person"
+            />
+          </div>
+          <div class="modal-actions">
+            <button
+              type="button"
+              class="button-secondary"
+              @click="closeEditClientModal"
+            >
+              Cancelar
+            </button>
+            <button type="submit" class="button-primary">
+              Salvar Alterações
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div
       v-if="isAddProjectModalOpen"
       class="modal-overlay"
       @click.self="closeAddProjectModal"
@@ -370,6 +472,10 @@ header {
   font-weight: 700;
   padding: 0.25rem;
 }
+.edit-button {
+  color: #ffa726;
+  margin-right: 0.5rem;
+}
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -417,7 +523,9 @@ header {
 }
 #new-client-name,
 #new-client-contact,
-#new-project-name {
+#new-project-name,
+#edit-client-name,
+#edit-client-contact {
   width: 100%;
   box-sizing: border-box;
   padding: 0.75rem;
