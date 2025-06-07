@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timezone
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 
@@ -87,6 +87,38 @@ def get_clients():
     return jsonify([c.to_dict() for c in Client.query.order_by(Client.name).all()])
 
 
+@app.route("/api/clients", methods=["POST"])
+def create_client():
+    # Pega os dados JSON enviados pelo frontend
+    data = request.get_json()
+
+    # Validação simples para garantir que o nome foi enviado
+    if not data or not data.get("name"):
+        return jsonify({"error": "O nome do cliente é obrigatório."}), 400
+
+    # Verifica se um cliente com este nome já existe
+    if Client.query.filter_by(name=data["name"]).first():
+        return (
+            jsonify({"error": "Um cliente com este nome já existe."}),
+            409,
+        )  # Conflict
+
+    # Cria a nova instância do modelo Cliente
+    new_client = Client(
+        name=data["name"],
+        contact_person=data.get(
+            "contact_person"
+        ),  # .get() é mais seguro, retorna None se não existir
+    )
+
+    # Adiciona ao banco de dados e salva
+    db.session.add(new_client)
+    db.session.commit()
+
+    # Retorna o cliente recém-criado com seu novo ID e um status 201 (Created)
+    return jsonify(new_client.to_dict()), 201
+
+
 @app.route("/api/clients/<int:client_id>/projects", methods=["GET"])
 def get_projects_by_client(client_id):
     return jsonify(
@@ -97,6 +129,45 @@ def get_projects_by_client(client_id):
             .all()
         ]
     )
+
+
+@app.route("/api/projects", methods=["POST"])
+def create_project():
+    data = request.get_json()
+
+    # Validação para garantir que recebemos o nome e o ID do cliente
+    if not data or not data.get("name") or not data.get("client_id"):
+        return (
+            jsonify({"error": "Nome do projeto e ID do cliente são obrigatórios."}),
+            400,
+        )
+
+    # Verifica se o cliente existe
+    client = db.session.get(Client, data["client_id"])
+    if not client:
+        return jsonify({"error": "Cliente não encontrado."}), 404
+
+    # Cria a nova instância do projeto
+    new_project = Project(name=data["name"], client_id=data["client_id"])
+    db.session.add(new_project)
+    db.session.commit()  # Salva o projeto para que ele tenha um ID
+
+    # IMPORTANTE: Cria as etapas padrão para o novo projeto
+    default_stages = [
+        "Briefing",
+        "Pesquisa",
+        "Esboços",
+        "Design Digital",
+        "Revisões",
+        "Finalização",
+    ]
+    for stage_name in default_stages:
+        new_stage = Stage(name=stage_name, project_id=new_project.id)
+        db.session.add(new_stage)
+
+    db.session.commit()  # Salva as novas etapas
+
+    return jsonify(new_project.to_dict()), 201
 
 
 @app.route("/api/projects/<int:project_id>/stages", methods=["GET"])
