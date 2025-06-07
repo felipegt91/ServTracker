@@ -1,4 +1,5 @@
 <script setup>
+import { formatDuration } from "@/utils/formatters.js";
 import { ref, onMounted } from "vue"; // O 'computed' não é mais necessário aqui
 import axios from "axios";
 import ActiveTimer from "./ActiveTimer.vue";
@@ -15,15 +16,6 @@ const emit = defineEmits(["stage-updated", "error"]);
 const activeTimerStartTime = ref(
   Number(localStorage.getItem("activeTimerStart")) || null
 );
-
-function formatDuration(s) {
-  if (!s) return "0s";
-  if (s < 60) return `${s}s`;
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
-}
 
 async function startStage(stageId) {
   try {

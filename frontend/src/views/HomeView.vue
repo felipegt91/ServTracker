@@ -1,7 +1,8 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed, reactive } from "vue";
 import axios from "axios";
 import ProjectTimeline from "@/components/ProjectTimeline.vue";
+import { formatDuration } from "@/utils/formatters.js";
 
 const clients = ref([]);
 const clientProjects = ref([]);
@@ -11,6 +12,18 @@ const selectedProject = ref(null);
 const isLoading = ref({ clients: false, projects: false, stages: false });
 const error = ref(null);
 
+// PROPRIEDADE COMPUTADA PARA O TEMPO TOTAL DO PROJETO
+const totalProjectTimeSeconds = computed(() => {
+  if (!stages.value || stages.value.length === 0) {
+    return 0;
+  }
+  return stages.value.reduce(
+    (total, stage) => total + stage.total_duration_seconds,
+    0
+  );
+});
+
+// FUNÇÃO RESTAURADA
 async function fetchClients() {
   isLoading.value.clients = true;
   try {
@@ -23,11 +36,14 @@ async function fetchClients() {
   }
 }
 
+// FUNÇÃO RESTAURADA
 async function onClientChange() {
   if (!selectedClient.value) return;
+
   clientProjects.value = [];
   stages.value = [];
   selectedProject.value = null;
+
   isLoading.value.projects = true;
   try {
     const response = await axios.get(
@@ -41,8 +57,10 @@ async function onClientChange() {
   }
 }
 
+// FUNÇÃO RESTAURADA
 async function onProjectChange() {
   if (!selectedProject.value) return;
+
   stages.value = [];
   isLoading.value.stages = true;
   try {
@@ -57,6 +75,7 @@ async function onProjectChange() {
   }
 }
 
+// FUNÇÃO RESTAURADA
 function handleError(message) {
   error.value = message;
   setTimeout(() => {
@@ -64,19 +83,18 @@ function handleError(message) {
   }, 5000);
 }
 
+// FUNÇÃO RESTAURADA
 function updateStageInList(updatedStage) {
-  // Encontra o índice do item a ser atualizado.
   const index = stages.value.findIndex((stage) => stage.id === updatedStage.id);
-
-  // Se o item for encontrado...
   if (index !== -1) {
-    // Usa .splice() para remover o item antigo e inserir o novo no mesmo lugar.
-    // Esta é uma mutação direta que o Vue detecta de forma muito eficaz.
-    stages.value.splice(index, 1, updatedStage);
+    stages.value.splice(index, 1, reactive(updatedStage));
   }
 }
 
-onMounted(fetchClients);
+// FUNÇÃO RESTAURADA
+onMounted(() => {
+  fetchClients();
+});
 </script>
 
 <template>
@@ -133,8 +151,14 @@ onMounted(fetchClients);
       <div v-if="isLoading.stages" style="text-align: center">
         Carregando andamento...
       </div>
+      <section v-if="stages.length > 0" class="project-header">
+        <h3>Tempo Total no Projeto</h3>
+        <div class="total-time-display">
+          {{ formatDuration(totalProjectTimeSeconds) }}
+        </div>
+      </section>
       <ProjectTimeline
-        v-else-if="stages.length > 0"
+        v-if="stages.length > 0"
         :stages="stages"
         @stage-updated="updateStageInList"
         @error="handleError"
@@ -192,5 +216,28 @@ header {
   border-left: 5px solid #f44336;
   color: #c62828;
   border-radius: 4px;
+}
+
+.project-header {
+  margin-bottom: 1rem;
+  padding: 1.5rem;
+  background-color: var(--cor-principal);
+  color: white;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.project-header h3 {
+  margin-bottom: 0.5rem;
+  font-weight: normal;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.total-time-display {
+  font-size: 2.5rem;
+  font-weight: bold;
+  font-family: "Courier New", Courier, monospace;
 }
 </style>
