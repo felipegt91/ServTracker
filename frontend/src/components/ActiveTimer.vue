@@ -2,19 +2,16 @@
 import { ref, onMounted, onUnmounted, computed } from "vue";
 
 const props = defineProps({
-  // Recebe o timestamp de início da sessão ATUAL
   startTime: {
     type: Number,
     required: true,
   },
-  // NOVA PROP: Recebe a duração total já registrada para esta etapa
   initialDuration: {
     type: Number,
     default: 0,
   },
 });
 
-// O estado agora representa o tempo total (duração inicial + tempo da sessão atual)
 const totalElapsedSeconds = ref(props.initialDuration);
 let timerInterval = null;
 
@@ -34,21 +31,13 @@ const formattedTime = computed(() => {
 
 onMounted(() => {
   const startTimestamp = props.startTime;
-
-  if (!startTimestamp) {
-    console.error(
-      "Não foi encontrado um tempo de início local para o cronômetro."
-    );
-    return;
-  }
+  if (!startTimestamp) return;
 
   timerInterval = setInterval(() => {
     const nowTimestamp = Date.now();
     const currentSessionSeconds = Math.floor(
       (nowTimestamp - startTimestamp) / 1000
     );
-
-    // AQUI ESTÁ A MUDANÇA: O tempo total é a soma da duração inicial + a da sessão atual
     totalElapsedSeconds.value = props.initialDuration + currentSessionSeconds;
   }, 1000);
 });
@@ -69,7 +58,7 @@ onUnmounted(() => {
   font-family: "Courier New", Courier, monospace;
   font-size: 1.2rem;
   font-weight: bold;
-  color: #1e88e5; /* Azul do status "em andamento" */
+  color: #1e88e5;
   background-color: #e3f2fd;
   padding: 0.5rem 1rem;
   border-radius: 4px;
