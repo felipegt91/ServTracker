@@ -184,6 +184,38 @@ def get_stages_by_project(project_id):
     )
 
 
+@app.route("/api/projects/<int:project_id>", methods=["PUT"])
+def update_project(project_id):
+    # Encontra o projeto existente pelo ID
+    project = db.session.get(Project, project_id)
+    if not project:
+        return jsonify({"error": "Projeto não encontrado."}), 404
+
+    data = request.get_json()
+    if not data or not data.get("name"):
+        return jsonify({"error": "O nome do projeto é obrigatório."}), 400
+
+    # Atualiza o nome e salva no banco
+    project.name = data["name"]
+    db.session.commit()
+
+    return jsonify(project.to_dict())
+
+
+@app.route("/api/projects/<int:project_id>", methods=["DELETE"])
+def delete_project(project_id):
+    project = db.session.get(Project, project_id)
+    if not project:
+        return jsonify({"error": "Projeto não encontrado."}), 404
+
+    # Graças ao 'cascade', apagar o projeto também apagará todas as suas
+    # etapas e registros de tempo associados.
+    db.session.delete(project)
+    db.session.commit()
+
+    return jsonify({"message": "Projeto deletado com sucesso."})
+
+
 @app.route("/api/stages/<int:stage_id>/start", methods=["POST"])
 def start_stage(stage_id):
     if Stage.query.filter_by(status="em_andamento").first():

@@ -16,10 +16,15 @@ const error = ref(null);
 // --- ESTADO DOS MODAIS ---
 const isAddClientModalOpen = ref(false);
 const newClient = ref({ name: "", contact_person: "" });
-const isAddProjectModalOpen = ref(false);
-const newProject = ref({ name: "" });
+
 const isEditClientModalOpen = ref(false);
 const editingClient = ref(null);
+
+const isAddProjectModalOpen = ref(false);
+const newProject = ref({ name: "" });
+
+const isEditProjectModalOpen = ref(false);
+const editingProject = ref(null);
 
 // --- PROPRIEDADE COMPUTADA ---
 const totalProjectTimeSeconds = computed(() => {
@@ -62,7 +67,10 @@ async function onClientChange() {
 }
 
 async function onProjectChange() {
-  if (!selectedProject.value) return;
+  if (!selectedProject.value) {
+    stages.value = [];
+    return;
+  }
   stages.value = [];
   isLoading.value.stages = true;
   try {
@@ -91,7 +99,7 @@ function updateStageInList(updatedStage) {
   }
 }
 
-// --- FUNÇÕES DO MODAL DE CLIENTE (ADICIONAR) ---
+// --- FUNÇÕES DO MODAL DE CLIENTE ---
 function openAddClientModal() {
   isAddClientModalOpen.value = true;
 }
@@ -112,8 +120,6 @@ async function saveNewClient() {
     handleError(err.response?.data?.error || "Erro ao salvar novo cliente.");
   }
 }
-
-// --- FUNÇÕES DO MODAL DE CLIENTE (EDITAR/DELETAR) ---
 function openEditClientModal() {
   if (!selectedClient.value) return;
   editingClient.value = { ...selectedClient.value };
@@ -129,10 +135,7 @@ async function updateClient() {
     return;
   }
   try {
-    const previouslySelectedClientId = selectedClient.value.id;
-    const previouslySelectedProjectId = selectedProject.value
-      ? selectedProject.value.id
-      : null;
+    const prevClientId = selectedClient.value.id;
     await axios.put(
       `http://127.0.0.1:5000/api/clients/${editingClient.value.id}`,
       editingClient.value
@@ -140,25 +143,16 @@ async function updateClient() {
     closeEditClientModal();
     await fetchClients();
     selectedClient.value =
-      clients.value.find((c) => c.id === previouslySelectedClientId) || null;
-    if (selectedClient.value) {
-      await onClientChange();
-      if (previouslySelectedProjectId) {
-        selectedProject.value =
-          clientProjects.value.find(
-            (p) => p.id === previouslySelectedProjectId
-          ) || null;
-      }
-    }
+      clients.value.find((c) => c.id === prevClientId) || null;
   } catch (err) {
     handleError(err.response?.data?.error || "Erro ao atualizar o cliente.");
   }
 }
 async function deleteClient(clientId) {
-  const userConfirmed = confirm(
+  const confirmed = confirm(
     "ATENÇÃO:\nVocê tem certeza que deseja deletar este cliente?\nTodos os projetos e tempos registrados para ele serão apagados PERMANENTEMENTE."
   );
-  if (!userConfirmed) return;
+  if (!confirmed) return;
   try {
     await axios.delete(`http://127.0.0.1:5000/api/clients/${clientId}`);
     closeEditClientModal();
@@ -197,6 +191,44 @@ async function saveNewProject() {
     handleError(err.response?.data?.error || "Erro ao salvar novo projeto.");
   }
 }
+function openEditProjectModal() {
+  if (!selectedProject.value) return;
+  editingProject.value = { ...selectedProject.value };
+  isEditProjectModalOpen.value = true;
+}
+function closeEditProjectModal() {
+  isEditProjectModalOpen.value = false;
+  editingProject.value = null;
+}
+async function updateProject() {
+  if (!editingProject.value || !editingProject.value.name.trim()) {
+    handleError("O nome do projeto não pode estar em branco.");
+    return;
+  }
+  try {
+    await axios.put(
+      `http://127.0.0.1:5000/api/projects/${editingProject.value.id}`,
+      editingProject.value
+    );
+    closeEditProjectModal();
+    await onClientChange();
+  } catch (err) {
+    handleError(err.response?.data?.error || "Erro ao atualizar o projeto.");
+  }
+}
+async function deleteProject(projectId) {
+  const confirmed = confirm(
+    "Você tem certeza que deseja deletar este projeto?"
+  );
+  if (!confirmed) return;
+  try {
+    await axios.delete(`http://127.0.0.1:5000/api/projects/${projectId}`);
+    closeEditProjectModal();
+    await onClientChange();
+  } catch (err) {
+    handleError(err.response?.data?.error || "Erro ao deletar o projeto.");
+  }
+}
 
 // --- HOOK DE CICLO DE VIDA ---
 onMounted(() => {
@@ -221,7 +253,7 @@ onMounted(() => {
                 @click="openEditClientModal"
                 class="add-new-button edit-button"
               >
-                Editar
+                Editar Cliente
               </button>
               <button @click="openAddClientModal" class="add-new-button">
                 + Novo Cliente
@@ -248,9 +280,18 @@ onMounted(() => {
         <div v-if="selectedClient" class="form-group">
           <div class="label-with-button">
             <label for="project-select">2. Selecione o Projeto:</label>
-            <button @click="openAddProjectModal" class="add-new-button">
-              + Novo Projeto
-            </button>
+            <div>
+              <button
+                v-if="selectedProject"
+                @click="openEditProjectModal"
+                class="add-new-button edit-button"
+              >
+                Editar Projeto
+              </button>
+              <button @click="openAddProjectModal" class="add-new-button">
+                + Novo Projeto
+              </button>
+            </div>
           </div>
           <select
             id="project-select"
@@ -424,6 +465,48 @@ onMounted(() => {
         </form>
       </div>
     </div>
+
+    <div
+      v-if="isEditProjectModalOpen"
+      class="modal-overlay"
+      @click.self="closeEditProjectModal"
+    >
+      <div class="modal-content">
+        <h2>Editar Projeto</h2>
+        <form v-if="editingProject" @submit.prevent="updateProject">
+          <div class="form-group">
+            <label for="edit-project-name">Nome do Projeto</label>
+            <input
+              type="text"
+              id="edit-project-name"
+              v-model="editingProject.name"
+              required
+            />
+          </div>
+          <div class="modal-actions">
+            <button
+              type="button"
+              class="button-danger"
+              @click="deleteProject(editingProject.id)"
+            >
+              Deletar Projeto
+            </button>
+            <div class="main-actions">
+              <button
+                type="button"
+                class="button-secondary"
+                @click="closeEditProjectModal"
+              >
+                Cancelar
+              </button>
+              <button type="submit" class="button-primary">
+                Salvar Alterações
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -550,6 +633,7 @@ header {
 #new-client-contact,
 #new-project-name,
 #edit-client-name,
+#edit-project-name,
 #edit-client-contact {
   width: 100%;
   box-sizing: border-box;
